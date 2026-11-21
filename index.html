@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Control de Deudas</title>
+
+  <!-- Configuración PWA y Pantalla de Inicio Móvil -->
+  <meta name="theme-color" content="#001a40">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Control Deudas">
+
+  <!-- Icono SVG embebido para iOS / Navegadores -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='112' fill='%23001a40'/><circle cx='256' cy='256' r='160' fill='none' stroke='%23FFDE21' stroke-width='28'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='190' fill='%23FFDE21'>$</text></svg>">
+
+  <!-- Manifiesto Web App embebido (Data URI) para instalación directa desde GitHub Pages -->
+  <link rel="manifest" href='data:application/manifest+json;utf8,{"name":"Control de Deudas","short_name":"Deudas","start_url":".","display":"standalone","background_color":"#121212","theme_color":"#001a40","orientation":"portrait","icons":[{"src":"data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 512 512%27><rect width=%27512%27 height=%27512%27 rx=%27112%27 fill=%27%23001a40%27/><text x=%2750%25%27 y=%2755%25%27 dominant-baseline=%27middle%27 text-anchor=%27middle%27 font-family=%27sans-serif%27 font-weight=%27900%27 font-size=%27240%27 fill=%27%23FFDE21%27>$</text></svg>","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"}]}'>
+
+  <!-- Tailwind CSS y Fuente Inter -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            bgdark: '#121212',
+            carddark: '#1c1c1e',
+            navydeep: '#001a40',
+            navyaccent: '#0833a2',
+            yellowpop: '#FFDE21',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Estilos base táctiles y ocultamiento limpio de barras de scroll horizontales */
+    body {
+      background-color: #121212;
+      color: #f3f4f6;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: contain;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Animación suave para modales y notificaciones */
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-slide-up {
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-28 select-none">
+
+  <!-- ENCABEZADO SUPERIOR Y TARJETA DE RESUMEN GENERAL -->
+  <header class="sticky top-0 z-30 bg-gradient-to-b from-navydeep via-navydeep to-[#0c162b] border-b border-blue-900/60 shadow-2xl rounded-b-3xl px-4 pt-4 pb-5">
+    <div class="max-w-lg mx-auto">
+      <!-- Barra de título y botones de respaldo -->
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-yellowpop text-navydeep flex items-center justify-center font-extrabold text-xl shadow-md">
+            $
+          </div>
+          <div>
+            <h1 class="text-lg font-extrabold tracking-tight text-white leading-tight">Control de Deudas</h1>
+            <p class="text-[11px] text-blue-200/80 font-medium">Gestión personal y cuotas</p>
+          </div>
+        </div>
+
+        <!-- Botones discretos: Exportar, Importar, Restaurar -->
+        <div class="flex items-center gap-1.5">
+          <button onclick="exportarJSON()" title="Exportar respaldo JSON" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-blue-100 transition" aria-label="Exportar JSON">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          </button>
+          <button onclick="document.getElementById('inputImportar').click()" title="Importar respaldo JSON" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-blue-100 transition" aria-label="Importar JSON">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          </button>
+          <input type="file" id="inputImportar" accept=".json" class="hidden" onchange="importarJSON(event)">
+          <button onclick="abrirModalConfirmarRestaurar()" title="Restaurar datos iniciales" class="p-2 rounded-xl bg-white/10 hover:bg-red-500/30 active:scale-95 text-blue-100 transition" aria-label="Restaurar datos">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tarjeta Principal: Total General Pendiente -->
+      <div class="bg-[#071329]/90 border border-blue-800/60 rounded-2xl p-4 shadow-inner">
+        <div class="flex items-end justify-between">
+          <div>
+            <span class="text-xs uppercase tracking-wider font-semibold text-blue-300">Total General Pendiente</span>
+            <div id="totalGeneralPendiente" class="text-3xl sm:text-4xl font-extrabold text-yellowpop tracking-tight mt-0.5">
+              $575.10
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-[11px] uppercase tracking-wider text-emerald-400 font-semibold block">Ya Pagado</span>
+            <span id="totalGeneralPagado" class="text-base font-bold text-emerald-300">$53.33</span>
+          </div>
+        </div>
+
+        <!-- Barra de progreso visual Pendiente vs Pagado -->
+        <div class="mt-3">
+          <div class="w-full h-2 bg-blue-950 rounded-full overflow-hidden flex">
+            <div id="barraProgresoPagado" class="bg-emerald-400 h-full transition-all duration-300" style="width: 8.5%"></div>
+            <div id="barraProgresoPendiente" class="bg-yellowpop h-full transition-all duration-300" style="width: 91.5%"></div>
+          </div>
+          <div class="flex justify-between text-[11px] text-blue-200/75 mt-1.5 font-medium">
+            <span id="textoConteoPendientes">19 cuotas pendientes</span>
+            <span id="textoPorcentajePagado">8% saldado</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="max-w-lg mx-auto px-4 pt-4">
+
+    <!-- Selector Horizontal de Meses / Categorías -->
+    <section aria-label="Filtro por mes" class="mb-3">
+      <div id="contenedorPestanasMes" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+        <!-- Se genera dinámicamente con JS -->
+      </div>
+    </section>
+
+    <!-- Filtros rápidos de Estado + Agrupación por Fecha -->
+    <section class="flex items-center justify-between gap-2 mb-4 bg-carddark p-1.5 rounded-2xl border border-neutral-800">
+      <div class="flex items-center gap-1 flex-1" role="group" aria-label="Filtro de estado">
+        <button onclick="cambiarFiltroEstado('Todas')" id="btnEstadoTodas" class="flex-1 py-2 px-2 rounded-xl text-xs font-bold transition">
+          Todas
+        </button>
+        <button onclick="cambiarFiltroEstado('Pendiente')" id="btnEstadoPendiente" class="flex-1 py-2 px-2 rounded-xl text-xs font-bold transition">
+          Pendientes
+        </button>
+        <button onclick="cambiarFiltroEstado('Pagada')" id="btnEstadoPagada" class="flex-1 py-2 px-2 rounded-xl text-xs font-bold transition">
+          Pagadas
+        </button>
+      </div>
+
+      <!-- Botón toggle para agrupar por fecha de pago -->
+      <button onclick="alternarAgruparPorFecha()" id="btnAgruparFecha" title="Agrupar por fecha de pago" class="py-2 px-3 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 shrink-0">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <span>Por Fecha</span>
+      </button>
+    </section>
+
+    <!-- Banner de Subtotal del Mes Seleccionado (cuando no está en "Todos") -->
+    <div id="bannerSubtotalMes" class="hidden mb-4 bg-navyaccent/25 border border-navyaccent/60 rounded-2xl px-4 py-3 flex items-center justify-between">
+      <div>
+        <span id="tituloMesSeleccionado" class="text-xs font-bold uppercase tracking-wider text-blue-300 block">NOVIEMBRE</span>
+        <span id="subtextoMesSeleccionado" class="text-xs text-neutral-400">5 deudas registradas</span>
+      </div>
+      <div class="text-right">
+        <span class="text-[11px] text-blue-200 block">Pendiente del mes</span>
+        <span id="montoSubtotalMes" class="text-xl font-extrabold text-yellowpop">$50.33</span>
+      </div>
+    </div>
+
+    <!-- Lista de Tarjetas de Deudas -->
+    <section id="listaDeudas" class="space-y-3">
+      <!-- Se renderiza dinámicamente -->
+    </section>
+
+    <!-- Mensaje de estado vacío -->
+    <div id="estadoVacio" class="hidden text-center py-12 px-4 bg-carddark rounded-3xl border border-neutral-800/80 mt-2">
+      <div class="w-12 h-12 rounded-2xl bg-neutral-800 text-neutral-400 flex items-center justify-center mx-auto mb-3">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </div>
+      <p class="text-sm font-semibold text-neutral-200">No hay registros en esta vista</p>
+      <p class="text-xs text-neutral-400 mt-1">Cambia los filtros o agrega una nueva deuda con el botón inferior.</p>
+    </div>
+
+  </main>
+
+  <!-- BOTÓN FLOTANTE "+ NUEVA DEUDA" -->
+  <div class="fixed bottom-5 inset-x-0 z-30 flex justify-center pointer-events-none px-4">
+    <button onclick="abrirModalDeuda()" class="pointer-events-auto flex items-center gap-2 bg-yellowpop hover:bg-yellow-300 active:scale-95 text-navydeep font-extrabold text-sm px-6 py-3.5 rounded-full shadow-[0_8px_25px_rgba(255,222,33,0.35)] transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      <span>Nueva Deuda</span>
+    </button>
+  </div>
+
+  <!-- MODAL AGREGAR / EDITAR DEUDA -->
+  <div id="modalDeuda" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-carddark w-full max-w-md rounded-t-3xl sm:rounded-3xl border border-neutral-800 p-5 shadow-2xl animate-slide-up">
+      <div class="flex items-center justify-between mb-4">
+        <h2 id="tituloModalDeuda" class="text-lg font-extrabold text-white">Agregar Nueva Deuda</h2>
+        <button onclick="cerrarModalDeuda()" class="p-2 rounded-xl bg-neutral-800 text-neutral-400 hover:text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <form id="formDeuda" onsubmit="guardarDeuda(event)" class="space-y-4">
+        <input type="hidden" id="campoId">
+
+        <!-- Persona o Comercio -->
+        <div>
+          <label for="campoPersona" class="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-1.5">Persona o Comercio</label>
+          <input type="text" id="campoPersona" required placeholder="Ej. Damasco, Cashea, Axel..." class="w-full bg-bgdark border border-neutral-700 focus:border-yellowpop rounded-2xl px-4 py-3 text-sm text-white outline-none transition">
+        </div>
+
+        <!-- Monto ($) y Fecha de Pago -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="campoMonto" class="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-1.5">Monto ($)</label>
+            <input type="number" id="campoMonto" step="0.01" min="0.01" required placeholder="0.00" class="w-full bg-bgdark border border-neutral-700 focus:border-yellowpop rounded-2xl px-4 py-3 text-sm text-white outline-none transition">
+          </div>
+          <div>
+            <label for="campoFecha" class="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-1.5">Fecha de Pago</label>
+            <input type="date" id="campoFecha" required class="w-full bg-bgdark border border-neutral-700 focus:border-yellowpop rounded-2xl px-3 py-3 text-sm text-white outline-none transition">
+          </div>
+        </div>
+
+        <!-- Mes / Categoría (Selector existente o escribir nuevo) -->
+        <div>
+          <label for="campoMesSelect" class="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-1.5">Mes / Categoría</label>
+          <select id="campoMesSelect" onchange="manejarCambioSelectMes()" class="w-full bg-bgdark border border-neutral-700 focus:border-yellowpop rounded-2xl px-4 py-3 text-sm text-white outline-none transition">
+            <!-- Opciones cargadas dinámicamente + "__NUEVO__" -->
+          </select>
+          <input type="text" id="campoMesNuevo" placeholder="Escribe el nuevo mes (Ej. MARZO)" class="hidden mt-2 w-full bg-bgdark border border-yellowpop rounded-2xl px-4 py-3 text-sm text-white uppercase outline-none transition">
+        </div>
+
+        <!-- Estado inicial -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-1.5">Estado</label>
+          <div class="grid grid-cols-2 gap-2.5">
+            <label class="cursor-pointer">
+              <input type="radio" name="campoEstado" value="Pendiente" checked class="peer hidden">
+              <div class="text-center py-2.5 rounded-2xl border border-neutral-700 bg-bgdark text-neutral-400 font-bold text-xs peer-checked:border-yellowpop peer-checked:bg-yellowpop/15 peer-checked:text-yellowpop transition">
+                Pendiente
+              </div>
+            </label>
+            <label class="cursor-pointer">
+              <input type="radio" name="campoEstado" value="Pagada" class="peer hidden">
+              <div class="text-center py-2.5 rounded-2xl border border-neutral-700 bg-bgdark text-neutral-400 font-bold text-xs peer-checked:border-emerald-400 peer-checked:bg-emerald-500/15 peer-checked:text-emerald-300 transition">
+                Pagada
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="pt-2 flex gap-2.5">
+          <button type="button" onclick="cerrarModalDeuda()" class="flex-1 py-3.5 rounded-2xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold text-sm transition">
+            Cancelar
+          </button>
+          <button type="submit" class="flex-1 py-3.5 rounded-2xl bg-navyaccent hover:bg-blue-700 text-white font-extrabold text-sm shadow-lg transition">
+            Guardar Deuda
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMACIÓN (RESTAURAR O ELIMINAR) -->
+  <div id="modalConfirmacion" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-carddark w-full max-w-sm rounded-3xl border border-neutral-800 p-5 shadow-2xl">
+      <h3 id="tituloConfirmacion" class="text-base font-extrabold text-white mb-1.5">¿Confirmar acción?</h3>
+      <p id="mensajeConfirmacion" class="text-xs text-neutral-400 mb-5 leading-relaxed">Esta acción modificará tus registros actuales.</p>
+      <div class="flex gap-2.5">
+        <button onclick="cerrarModalConfirmacion()" class="flex-1 py-3 rounded-2xl bg-neutral-800 text-neutral-300 font-bold text-xs">
+          Cancelar
+        </button>
+        <button id="btnConfirmarAccion" class="flex-1 py-3 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICACIÓN TOAST FLOTANTE -->
+  <div id="toastNotificacion" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 hidden bg-neutral-900 border border-neutral-700 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-xl">
+    Mensaje
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. DATOS INICIALES EXACTOS (Precarga con Total Pendiente = $575.10)
+    // =========================================================================
+    const CLAVE_STORAGE = 'control_deudas_pwa_v1';
+
+    const DATOS_INICIALES = [
+      // 1. NOVIEMBRE ($50.33)
+      { id: 'd1', mes: 'NOVIEMBRE', persona: 'Cashea', monto: 24.33, fecha: '2026-12-27', estado: 'Pendiente' },
+      { id: 'd2', mes: 'NOVIEMBRE', persona: 'Nata', monto: 6.00, fecha: '2026-12-27', estado: 'Pendiente' },
+      { id: 'd3', mes: 'NOVIEMBRE', persona: 'Dari', monto: 7.00, fecha: '2026-12-27', estado: 'Pendiente' },
+      { id: 'd4', mes: 'NOVIEMBRE', persona: 'Jordi', monto: 3.00, fecha: '2026-12-27', estado: 'Pendiente' },
+      { id: 'd5', mes: 'NOVIEMBRE', persona: 'Doris', monto: 10.00, fecha: '2026-12-27', estado: 'Pendiente' },
+
+      // 2. DICIEMBRE ($163.00)
+      { id: 'd6', mes: 'DICIEMBRE', persona: 'Arelis', monto: 28.00, fecha: '2026-12-05', estado: 'Pendiente' },
+      { id: 'd7', mes: 'DICIEMBRE', persona: 'Axel', monto: 105.00, fecha: '2026-12-05', estado: 'Pendiente' },
+      { id: 'd8', mes: 'DICIEMBRE', persona: 'Papa', monto: 30.00, fecha: '2026-12-05', estado: 'Pendiente' },
+
+      // 3. DICIEMBRE-CASHEA ($255.11)
+      { id: 'd9', mes: 'DICIEMBRE-CASHEA', persona: 'Tio Ammi', monto: 17.08, fecha: '2026-12-01', estado: 'Pendiente' },
+      { id: 'd10', mes: 'DICIEMBRE-CASHEA', persona: 'Tijerazo', monto: 18.40, fecha: '2026-12-01', estado: 'Pendiente' },
+      { id: 'd11', mes: 'DICIEMBRE-CASHEA', persona: 'Chopsueria', monto: 7.08, fecha: '2026-12-02', estado: 'Pendiente' },
+      { id: 'd12', mes: 'DICIEMBRE-CASHEA', persona: 'Damasco', monto: 53.33, fecha: '2026-12-02', estado: 'Pendiente' },
+      { id: 'd13', mes: 'DICIEMBRE-CASHEA', persona: 'Tio Ammi', monto: 17.08, fecha: '2026-12-15', estado: 'Pendiente' },
+      { id: 'd14', mes: 'DICIEMBRE-CASHEA', persona: 'Tijerazo', monto: 18.40, fecha: '2026-12-16', estado: 'Pendiente' },
+      { id: 'd15', mes: 'DICIEMBRE-CASHEA', persona: 'Damasco', monto: 53.33, fecha: '2026-12-16', estado: 'Pendiente' },
+      { id: 'd16', mes: 'DICIEMBRE-CASHEA', persona: 'Tio Ammi', monto: 17.08, fecha: '2026-12-29', estado: 'Pendiente' },
+      { id: 'd17', mes: 'DICIEMBRE-CASHEA', persona: 'Damasco', monto: 53.33, fecha: '2026-12-30', estado: 'Pendiente' },
+
+      // 4. ENERO ($106.66)
+      { id: 'd18', mes: 'ENERO', persona: 'Damasco', monto: 53.33, fecha: '2027-01-13', estado: 'Pendiente' },
+      { id: 'd19', mes: 'ENERO', persona: 'Damasco', monto: 53.33, fecha: '2027-01-27', estado: 'Pendiente' },
+
+      // 5. FEBRERO ($0.00 pendiente / $53.33 pagada)
+      { id: 'd20', mes: 'FEBRERO', persona: 'Damasco', monto: 53.33, fecha: '2027-02-10', estado: 'Pagada' }
+    ];
+
+    // =========================================================================
+    // 2. ESTADO DE LA APLICACIÓN Y PERSISTENCIA
+    // =========================================================================
+    let deudas = [];
+    let mesActivo = 'Todos';
+    let filtroEstado = 'Todas'; // 'Todas' | 'Pendiente' | 'Pagada'
+    let agruparPorFecha = false;
+
+    function cargarDeudas() {
+      try {
+        const guardado = localStorage.getItem(CLAVE_STORAGE);
+        if (guardado) {
+          deudas = JSON.parse(guardado);
+        } else {
+          deudas = JSON.parse(JSON.stringify(DATOS_INICIALES));
+          guardarEnStorage();
+        }
+      } catch (e) {
+        console.error('Error leyendo localStorage:', e);
+        deudas = JSON.parse(JSON.stringify(DATOS_INICIALES));
+      }
+    }
+
+    function guardarEnStorage() {
+      try {
+        localStorage.setItem(CLAVE_STORAGE, JSON.stringify(deudas));
+      } catch (e) {
+        mostrarToast('No se pudo guardar en el almacenamiento local');
+      }
+    }
+
+    // =========================================================================
+    // 3. UTILIDADES DE FORMATO Y CÁLCULO
+    // =========================================================================
+    function formatearMoneda(valor) {
+      return '$' + Number(valor || 0).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function formatearFechaDDMMYYYY(fechaISO) {
+      if (!fechaISO || !fechaISO.includes('-')) return fechaISO || '';
+      const [anio, mes, dia] = fechaISO.split('-');
+      return `${dia}/${mes}/${anio}`;
+    }
+
+    function obtenerMesesUnicos() {
+      const ordenBase = ['NOVIEMBRE', 'DICIEMBRE', 'DICIEMBRE-CASHEA', 'ENERO', 'FEBRERO'];
+      const encontrados = new Set(deudas.map(d => d.mes.trim().toUpperCase()));
+      const resultado = [];
+
+      ordenBase.forEach(m => {
+        if (encontrados.has(m)) {
+          resultado.push(m);
+          encontrados.delete(m);
+        }
+      });
+      encontrados.forEach(m => resultado.push(m));
+      return resultado;
+    }
+
+    function mostrarToast(mensaje) {
+      const toast = document.getElementById('toastNotificacion');
+      toast.textContent = mensaje;
+      toast.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 2400);
+    }
+
+    // =========================================================================
+    // 4. RENDERIZADO DE INTERFAZ
+    // =========================================================================
+    function renderizarTodo() {
+      actualizarResumenGeneral();
+      renderizarPestanasMeses();
+      actualizarControlesFiltro();
+      renderizarListaDeudas();
+    }
+
+    function actualizarResumenGeneral() {
+      let totalPendiente = 0;
+      let totalPagado = 0;
+      let conteoPendientes = 0;
+
+      deudas.forEach(d => {
+        const monto = parseFloat(d.monto) || 0;
+        if (d.estado === 'Pendiente') {
+          totalPendiente += monto;
+          conteoPendientes++;
+        } else {
+          totalPagado += monto;
+        }
+      });
+
+      const totalGlobal = totalPendiente + totalPagado;
+      const pctPagado = totalGlobal > 0 ? Math.round((totalPagado / totalGlobal) * 100) : 0;
+      const pctPendiente = totalGlobal > 0 ? 100 - pctPagado : 0;
+
+      document.getElementById('totalGeneralPendiente').textContent = formatearMoneda(totalPendiente);
+      document.getElementById('totalGeneralPagado').textContent = formatearMoneda(totalPagado);
+      document.getElementById('barraProgresoPagado').style.width = `${pctPagado}%`;
+      document.getElementById('barraProgresoPendiente').style.width = `${pctPendiente}%`;
+      document.getElementById('textoConteoPendientes').textContent =
+        conteoPendientes === 1 ? '1 cuota pendiente' : `${conteoPendientes} cuotas pendientes`;
+      document.getElementById('textoPorcentajePagado').textContent = `${pctPagado}% saldado`;
+    }
+
+    function renderizarPestanasMeses() {
+      const contenedor = document.getElementById('contenedorPestanasMes');
+      const meses = obtenerMesesUnicos();
+
+      if (mesActivo !== 'Todos' && !meses.includes(mesActivo)) {
+        mesActivo = 'Todos';
+      }
+
+      const totalPendienteTodos = deudas
+        .filter(d => d.estado === 'Pendiente')
+        .reduce((acc, d) => acc + (parseFloat(d.monto) || 0), 0);
+
+      let html = `
+        <button onclick="seleccionarMes('Todos')" class="shrink-0 px-3.5 py-2 rounded-2xl border text-left transition active:scale-95 ${
+          mesActivo === 'Todos'
+            ? 'bg-yellowpop text-navydeep border-yellowpop shadow-md'
+            : 'bg-carddark text-neutral-300 border-neutral-800 hover:border-neutral-700'
+        }">
+          <span class="block text-[11px] font-extrabold uppercase tracking-wide">Todos</span>
+          <span class="block text-xs font-bold ${mesActivo === 'Todos' ? 'text-navydeep/90' : 'text-yellowpop'}">${formatearMoneda(totalPendienteTodos)}</span>
+        </button>
+      `;
+
+      meses.forEach(mes => {
+        const subtotalPendiente = deudas
+          .filter(d => d.mes.toUpperCase() === mes && d.estado === 'Pendiente')
+          .reduce((acc, d) => acc + (parseFloat(d.monto) || 0), 0);
+
+        const activo = mesActivo === mes;
+        html += `
+          <button onclick="seleccionarMes('${mes.replace(/'/g, "\\'")}')" class="shrink-0 px-3.5 py-2 rounded-2xl border text-left transition active:scale-95 ${
+            activo
+              ? 'bg-navyaccent text-white border-blue-400 shadow-md'
+              : 'bg-carddark text-neutral-300 border-neutral-800 hover:border-neutral-700'
+          }">
+            <span class="block text-[11px] font-extrabold uppercase tracking-wide">${mes}</span>
+            <span class="block text-xs font-bold ${activo ? 'text-yellowpop' : (subtotalPendiente === 0 ? 'text-emerald-400' : 'text-neutral-400')}">
+              ${subtotalPendiente === 0 ? 'Saldado ✓' : formatearMoneda(subtotalPendiente)}
+            </span>
+          </button>
+        `;
+      });
+
+      contenedor.innerHTML = html;
+    }
+
+    function actualizarControlesFiltro() {
+      const estados = ['Todas', 'Pendiente', 'Pagada'];
+      estados.forEach(est => {
+        const btn = document.getElementById(`btnEstado${est}`);
+        if (filtroEstado === est) {
+          btn.className = 'flex-1 py-2 px-2 rounded-xl text-xs font-extrabold bg-navyaccent text-white shadow transition';
+        } else {
+          btn.className = 'flex-1 py-2 px-2 rounded-xl text-xs font-bold text-neutral-400 hover:text-white transition';
+        }
+      });
+
+      const btnFecha = document.getElementById('btnAgruparFecha');
+      if (agruparPorFecha) {
+        btnFecha.className = 'py-2 px-3 rounded-xl text-xs font-extrabold border border-yellowpop bg-yellowpop/15 text-yellowpop transition flex items-center gap-1.5 shrink-0';
+      } else {
+        btnFecha.className = 'py-2 px-3 rounded-xl text-xs font-bold border border-neutral-700 bg-bgdark text-neutral-400 hover:text-white transition flex items-center gap-1.5 shrink-0';
+      }
+    }
+
+    function renderizarListaDeudas() {
+      const listaEl = document.getElementById('listaDeudas');
+      const vacioEl = document.getElementById('estadoVacio');
+      const bannerEl = document.getElementById('bannerSubtotalMes');
+
+      // Filtrar por mes y por estado
+      let filtradas = deudas.filter(d => {
+        const coincideMes = mesActivo === 'Todos' || d.mes.toUpperCase() === mesActivo;
+        const coincideEstado = filtroEstado === 'Todas' || d.estado === filtroEstado;
+        return coincideMes && coincideEstado;
+      });
+
+      // Mostrar/ocultar banner subtotal del mes específico
+      if (mesActivo !== 'Todos') {
+        const totalMes = deudas.filter(d => d.mes.toUpperCase() === mesActivo);
+        const pendienteMes = totalMes
+          .filter(d => d.estado === 'Pendiente')
+          .reduce((acc, d) => acc + (parseFloat(d.monto) || 0), 0);
+
+        document.getElementById('tituloMesSeleccionado').textContent = mesActivo;
+        document.getElementById('subtextoMesSeleccionado').textContent =
+          `${totalMes.length} ${totalMes.length === 1 ? 'cuota registrada' : 'cuotas registradas'}`;
+        document.getElementById('montoSubtotalMes').textContent = formatearMoneda(pendienteMes);
+        bannerEl.classList.remove('hidden');
+      } else {
+        bannerEl.classList.add('hidden');
+      }
+
+      if (filtradas.length === 0) {
+        listaEl.innerHTML = '';
+        vacioEl.classList.remove('hidden');
+        return;
+      }
+      vacioEl.classList.add('hidden');
+
+      // Ordenar por fecha ascendente
+      filtradas.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+
+      if (agruparPorFecha) {
+        // Agrupar por fecha exacta y calcular subtotal pendiente de esa fecha
+        const grupos = {};
+        filtradas.forEach(item => {
+          const claveFecha = item.fecha || 'Sin fecha';
+          if (!grupos[claveFecha]) grupos[claveFecha] = [];
+          grupos[claveFecha].push(item);
+        });
+
+        let html = '';
+        Object.keys(grupos).sort().forEach(fechaISO => {
+          const items = grupos[fechaISO];
+          const subtotalFechaPendiente = items
+            .filter(i => i.estado === 'Pendiente')
+            .reduce((acc, i) => acc + (parseFloat(i.monto) || 0), 0);
+
+          html += `
+            <div class="pt-1">
+              <div class="flex items-center justify-between px-2 mb-2">
+                <span class="text-xs font-extrabold text-blue-300 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-yellowpop inline-block"></span>
+                  Fecha: ${formatearFechaDDMMYYYY(fechaISO)}
+                </span>
+                <span class="text-xs font-bold text-neutral-300 bg-neutral-800/90 px-2.5 py-0.5 rounded-full">
+                  Pendiente fecha: <strong class="text-yellowpop">${formatearMoneda(subtotalFechaPendiente)}</strong>
+                </span>
+              </div>
+              <div class="space-y-2.5">
+                ${items.map(d => crearTarjetaDeudaHTML(d)).join('')}
+              </div>
+            </div>
+          `;
+        });
+        listaEl.innerHTML = html;
+      } else {
+        listaEl.innerHTML = filtradas.map(d => crearTarjetaDeudaHTML(d)).join('');
+      }
+    }
+
+    function crearTarjetaDeudaHTML(deuda) {
+      const esPagada = deuda.estado === 'Pagada';
+
+      return `
+        <article class="rounded-2xl border p-3.5 transition-all duration-200 flex items-center gap-3 ${
+          esPagada
+            ? 'bg-carddark/45 border-neutral-800/60 opacity-60'
+            : 'bg-carddark border-neutral-800 hover:border-neutral-700 shadow-sm'
+        }">
+          <!-- Switch / Botón Táctil Grande para alternar Pendiente / Pagada -->
+          <button
+            onclick="alternarEstadoDeuda('${deuda.id}')"
+            aria-label="Marcar como ${esPagada ? 'Pendiente' : 'Pagada'}"
+            class="w-12 h-12 rounded-2xl shrink-0 flex flex-col items-center justify-center border-2 transition active:scale-90 ${
+              esPagada
+                ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                : 'bg-bgdark border-neutral-700 hover:border-yellowpop text-neutral-500'
+            }">
+            ${
+              esPagada
+                ? `<svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`
+                : `<span class="w-5 h-5 rounded-full border-2 border-neutral-600"></span>`
+            }
+          </button>
+
+          <!-- Información de la Deuda -->
+          <div class="flex-1 min-w-0" onclick="alternarEstadoDeuda('${deuda.id}')">
+            <div class="flex items-center gap-1.5 mb-0.5">
+              <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-navydeep text-blue-300 border border-blue-900/60 truncate">
+                ${deuda.mes}
+              </span>
+              <span class="text-[11px] font-medium text-neutral-400">
+                ${formatearFechaDDMMYYYY(deuda.fecha)}
+              </span>
+            </div>
+
+            <h3 class="text-base font-bold truncate ${esPagada ? 'line-through text-neutral-400' : 'text-white'}">
+              ${deuda.persona}
+            </h3>
+
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-lg font-extrabold ${esPagada ? 'line-through text-emerald-400/80' : 'text-yellowpop'}">
+                ${formatearMoneda(deuda.monto)}
+              </span>
+              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                esPagada
+                  ? 'bg-emerald-500/15 text-emerald-300'
+                  : 'bg-amber-500/15 text-amber-300'
+              }">
+                ${esPagada ? 'Pagada' : 'Pendiente'}
+              </span>
+            </div>
+          </div>
+
+          <!-- Acciones rápidas: Editar y Eliminar -->
+          <div class="flex flex-col gap-1.5 shrink-0">
+            <button onclick="abrirModalDeuda('${deuda.id}')" title="Editar deuda" class="p-2 rounded-xl bg-neutral-800/90 hover:bg-navyaccent text-neutral-300 hover:text-white transition active:scale-90" aria-label="Editar">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+            </button>
+            <button onclick="confirmarEliminarDeuda('${deuda.id}')" title="Eliminar deuda" class="p-2 rounded-xl bg-neutral-800/90 hover:bg-red-600/80 text-neutral-400 hover:text-white transition active:scale-90" aria-label="Eliminar">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        </article>
+      `;
+    }
+
+    // =========================================================================
+    // 5. INTERACCIONES DE USUARIO
+    // =========================================================================
+    function seleccionarMes(mes) {
+      mesActivo = mes;
+      renderizarTodo();
+    }
+
+    function cambiarFiltroEstado(estado) {
+      filtroEstado = estado;
+      renderizarTodo();
+    }
+
+    function alternarAgruparPorFecha() {
+      agruparPorFecha = !agruparPorFecha;
+      renderizarTodo();
+    }
+
+    function alternarEstadoDeuda(id) {
+      const idx = deudas.findIndex(d => d.id === id);
+      if (idx === -1) return;
+
+      const nuevoEstado = deudas[idx].estado === 'Pendiente' ? 'Pagada' : 'Pendiente';
+      deudas[idx].estado = nuevoEstado;
+      guardarEnStorage();
+      renderizarTodo();
+
+      mostrarToast(
+        nuevoEstado === 'Pagada'
+          ? `✓ ${deudas[idx].persona} marcada como Pagada`
+          : `↺ ${deudas[idx].persona} vuelta a Pendiente`
+      );
+    }
+
+    // =========================================================================
+    // 6. MODAL AGREGAR / EDITAR DEUDA
+    // =========================================================================
+    function abrirModalDeuda(idEditar = null) {
+      const modal = document.getElementById('modalDeuda');
+      const titulo = document.getElementById('tituloModalDeuda');
+      const selectMes = document.getElementById('campoMesSelect');
+      const inputMesNuevo = document.getElementById('campoMesNuevo');
+
+      // Poblar selector de meses existentes + opción crear nuevo
+      const meses = obtenerMesesUnicos();
+      selectMes.innerHTML = meses
+        .map(m => `<option value="${m}">${m}</option>`)
+        .join('') + `<option value="__NUEVO__">+ Escribir nuevo mes/categoría...</option>`;
+
+      inputMesNuevo.classList.add('hidden');
+      inputMesNuevo.value = '';
+      inputMesNuevo.required = false;
+
+      if (idEditar) {
+        const d = deudas.find(item => item.id === idEditar);
+        if (!d) return;
+        titulo.textContent = 'Editar Deuda';
+        document.getElementById('campoId').value = d.id;
+        document.getElementById('campoPersona').value = d.persona;
+        document.getElementById('campoMonto').value = d.monto;
+        document.getElementById('campoFecha').value = d.fecha;
+        selectMes.value = d.mes.toUpperCase();
+        document.querySelector(`input[name="campoEstado"][value="${d.estado}"]`).checked = true;
+      } else {
+        titulo.textContent = 'Agregar Nueva Deuda';
+        document.getElementById('campoId').value = '';
+        document.getElementById('campoPersona').value = '';
+        document.getElementById('campoMonto').value = '';
+        document.getElementById('campoFecha').value = new Date().toISOString().split('T')[0];
+        if (mesActivo !== 'Todos' && meses.includes(mesActivo)) {
+          selectMes.value = mesActivo;
+        }
+        document.querySelector('input[name="campoEstado"][value="Pendiente"]').checked = true;
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function cerrarModalDeuda() {
+      document.getElementById('modalDeuda').classList.add('hidden');
+    }
+
+    function manejarCambioSelectMes() {
+      const selectMes = document.getElementById('campoMesSelect');
+      const inputMesNuevo = document.getElementById('campoMesNuevo');
+      if (selectMes.value === '__NUEVO__') {
+        inputMesNuevo.classList.remove('hidden');
+        inputMesNuevo.required = true;
+        inputMesNuevo.focus();
+      } else {
+        inputMesNuevo.classList.add('hidden');
+        inputMesNuevo.required = false;
+      }
+    }
+
+    function guardarDeuda(e) {
+      e.preventDefault();
+      const id = document.getElementById('campoId').value;
+      const persona = document.getElementById('campoPersona').value.trim();
+      const monto = parseFloat(document.getElementById('campoMonto').value);
+      const fecha = document.getElementById('campoFecha').value;
+      const selectMes = document.getElementById('campoMesSelect').value;
+      const mesNuevo = document.getElementById('campoMesNuevo').value.trim().toUpperCase();
+      const estado = document.querySelector('input[name="campoEstado"]:checked').value;
+
+      const mesFinal = selectMes === '__NUEVO__' ? mesNuevo : selectMes;
+
+      if (!persona || isNaN(monto) || monto <= 0 || !fecha || !mesFinal) {
+        mostrarToast('Por favor completa todos los campos correctamente');
+        return;
+      }
+
+      if (id) {
+        const idx = deudas.findIndex(d => d.id === id);
+        if (idx !== -1) {
+          deudas[idx] = { id, mes: mesFinal, persona, monto, fecha, estado };
+          mostrarToast('Deuda actualizada');
+        }
+      } else {
+        const nueva = {
+          id: 'd_' + Date.now(),
+          mes: mesFinal,
+          persona,
+          monto,
+          fecha,
+          estado
+        };
+        deudas.push(nueva);
+        mesActivo = mesFinal;
+        mostrarToast('Nueva deuda agregada');
+      }
+
+      guardarEnStorage();
+      cerrarModalDeuda();
+      renderizarTodo();
+    }
+
+    // =========================================================================
+    // 7. CONFIRMACIONES, RESPALDO JSON Y RESTAURACIÓN
+    // =========================================================================
+    function abrirModalConfirmacion(titulo, mensaje, textoBoton, accionCallback) {
+      document.getElementById('tituloConfirmacion').textContent = titulo;
+      document.getElementById('mensajeConfirmacion').textContent = mensaje;
+      const btn = document.getElementById('btnConfirmarAccion');
+      btn.textContent = textoBoton;
+      btn.onclick = () => {
+        accionCallback();
+        cerrarModalConfirmacion();
+      };
+      document.getElementById('modalConfirmacion').classList.remove('hidden');
+    }
+
+    function cerrarModalConfirmacion() {
+      document.getElementById('modalConfirmacion').classList.add('hidden');
+    }
+
+    function confirmarEliminarDeuda(id) {
+      const deuda = deudas.find(d => d.id === id);
+      if (!deuda) return;
+      abrirModalConfirmacion(
+        '¿Eliminar esta deuda?',
+        `Se borrará "${deuda.persona}" por ${formatearMoneda(deuda.monto)} de ${deuda.mes}.`,
+        'Eliminar',
+        () => {
+          deudas = deudas.filter(d => d.id !== id);
+          guardarEnStorage();
+          renderizarTodo();
+          mostrarToast('Deuda eliminada');
+        }
+      );
+    }
+
+    function abrirModalConfirmarRestaurar() {
+      abrirModalConfirmacion(
+        '¿Restaurar datos iniciales?',
+        'Se borrarán tus cambios actuales y volverán los 20 registros originales de tu tabla ($575.10 pendiente).',
+        'Restaurar',
+        () => {
+          deudas = JSON.parse(JSON.stringify(DATOS_INICIALES));
+          mesActivo = 'Todos';
+          filtroEstado = 'Todas';
+          guardarEnStorage();
+          renderizarTodo();
+          mostrarToast('Datos iniciales restaurados');
+        }
+      );
+    }
+
+    function exportarJSON() {
+      try {
+        const contenido = JSON.stringify(deudas, null, 2);
+        const blob = new Blob([contenido], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = `respaldo-deudas-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(enlace);
+        enlace.click();
+        document.body.removeChild(enlace);
+        URL.revokeObjectURL(url);
+        mostrarToast('Respaldo JSON descargado');
+      } catch (e) {
+        mostrarToast('Error al exportar el respaldo');
+      }
+    }
+
+    function importarJSON(event) {
+      const archivo = event.target.files[0];
+      if (!archivo) return;
+
+      const lector = new FileReader();
+      lector.onload = function(e) {
+        try {
+          const datosImportados = JSON.parse(e.target.result);
+          if (!Array.isArray(datosImportados)) throw new Error('Formato inválido');
+
+          const validos = datosImportados.every(
+            item => item.persona && typeof item.monto === 'number' && item.mes && item.estado
+          );
+          if (!validos) throw new Error('Estructura incompleta');
+
+          deudas = datosImportados;
+          guardarEnStorage();
+          renderizarTodo();
+          mostrarToast('Respaldo importado con éxito');
+        } catch (err) {
+          mostrarToast('El archivo JSON no es válido');
+        } finally {
+          event.target.value = '';
+        }
+      };
+      lector.readAsText(archivo);
+    }
+
+    // =========================================================================
+    // 8. SERVICE WORKER LIGERO EN LÍNEA (Para soporte Offline / PWA)
+    // =========================================================================
+    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+      const swCode = `
+        self.addEventListener('install', e => self.skipWaiting());
+        self.addEventListener('activate', e => self.clients.claim());
+        self.addEventListener('fetch', e => {
+          e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+        });
+      `;
+      const swBlob = new Blob([swCode], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(swBlob);
+      navigator.serviceWorker.register(swUrl).catch(() => {});
+    }
+
+    // Inicialización al cargar la página
+    window.addEventListener('DOMContentLoaded', () => {
+      cargarDeudas();
+      renderizarTodo();
+    });
+  </script>
+</body>
+</html>
